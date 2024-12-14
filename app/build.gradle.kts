@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("kotlin-kapt")
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -17,6 +17,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        //buildConfigField("String", "ALPHA_VANTAGE_API_KEY", "\"YVCBLSWG6DB0P0QW\"")
+        //buildConfigField("String", "ALPHA_VANTAGE_API_KEY", "\"4WL40438YTS425HJ\"")
+        buildConfigField("String", "ALPHA_VANTAGE_API_KEY", "\"H1VL0QM5TYMB2SRE\"")
     }
 
     buildTypes {
@@ -37,11 +41,13 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = libs.versions.kotlin.get() // Automaticky vezme verzi z `libs.versions.toml`
+        kotlinCompilerExtensionVersion = libs.versions.kotlin.get()
     }
+
 }
 
 dependencies {
@@ -64,14 +70,20 @@ dependencies {
 
     // Room
     implementation(libs.room.runtime)
-    kapt(libs.room.compiler)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
 
     // Retrofit
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
+    implementation(libs.okhttp)
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 
     // Navigation Compose
     implementation(libs.navigation.compose)
 
     implementation(libs.androidx.material)
+
+    implementation(libs.androidx.lifecycle.runtime.compose)
+
 }
