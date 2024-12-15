@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import com.example.stockportfoliotracker.data.models.StockEntity
 import com.example.stockportfoliotracker.data.models.TransactionEntity
 
-@Database(entities = [StockEntity::class, TransactionEntity::class], version = 4)
+@Database(entities = [StockEntity::class, TransactionEntity::class], version = 5)
 abstract class StockDatabase : RoomDatabase() {
     abstract fun stockDao(): StockDao
     abstract fun transactionDao(): TransactionDao

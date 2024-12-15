@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.stockportfoliotracker.data.StockDatabase
 import com.example.stockportfoliotracker.data.models.TransactionEntity
 import com.example.stockportfoliotracker.network.RetrofitClient
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
@@ -20,6 +21,9 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
     init {
         loadTransactions()
@@ -51,6 +55,7 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
 
     fun refreshPortfolioPrices() {
         viewModelScope.launch {
+            _isRefreshing.value = true
             try {
                 // Fetch unique tickers from all transactions
                 val transactions = transactionDao.getAllTransactions().first()
@@ -79,8 +84,30 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
             } catch (e: Exception) {
                 e.printStackTrace()
                 _errorMessage.value = "Failed to refresh portfolio prices."
+            } finally {
+                _isRefreshing.value = false
             }
         }
     }
+
+    fun getTransactionById(id: Int): Flow<TransactionEntity?> {
+        return transactionDao.getTransactionById(id)
+    }
+
+    fun updateTransaction(transaction: TransactionEntity) {
+        viewModelScope.launch {
+            transactionDao.insertTransaction(transaction) // Replaces the transaction with the new one
+            loadTransactions()
+        }
+    }
+
+    fun getNetQuantityForTicker(ticker: String): Int {
+        val normalizedTicker = ticker.lowercase() // Normalize user input
+        return transactions.value
+            .filter { it.ticker.lowercase() == normalizedTicker } // Normalize stored tickers
+            .sumOf { it.quantity }
+    }
+
+
 
 }

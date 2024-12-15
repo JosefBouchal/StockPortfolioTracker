@@ -47,11 +47,6 @@ fun WatchlistScreen(stockViewModel: StockViewModel, navController: NavController
                     }
                 }
             )
-        },
-        floatingActionButton = { // Define FAB here
-            FloatingActionButton(onClick = { navController.navigate("addToWatchlist") }) {
-                Text("+")
-            }
         }
     ) { innerPadding ->
         LazyColumn(

@@ -29,8 +29,11 @@ import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.stockportfoliotracker.network.RetrofitClient
 import com.example.stockportfoliotracker.ui.AddToWatchlistScreen
+import com.example.stockportfoliotracker.views.EditTransactionScreen
 import com.example.stockportfoliotracker.views.PortfolioScreen
 import com.example.stockportfoliotracker.views.WatchlistScreen
 
@@ -43,6 +46,10 @@ fun PortfolioApp(context: Context) {
     val stockViewModel: StockViewModel = viewModel()
     val transactionViewModel: TransactionViewModel = viewModel()
     val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        RetrofitClient.setUserApiKey(context)
+    }
 
     // Toggle dark mode and save to DataStore
     val toggleTheme: () -> Unit = {
@@ -62,6 +69,9 @@ fun PortfolioApp(context: Context) {
     ) {
         var selectedTab by remember { mutableStateOf("portfolio") }
 
+        // Get the current destination
+        val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+
         Scaffold(
             bottomBar = {
                 BottomNavigationBar(
@@ -71,13 +81,18 @@ fun PortfolioApp(context: Context) {
                 )
             },
             floatingActionButton = {
-                when (selectedTab) {
-                    "portfolio" -> FloatingActionButton(onClick = { navController.navigate("addTransaction") }) {
-                        Text("+")
+                // Hide FAB for specific routes
+                if (currentRoute !in listOf("detail/{ticker}", "settings", "addTransaction", "addToWatchlist")) {
+                    when (selectedTab) {
+                        "portfolio" -> FloatingActionButton(onClick = { navController.navigate("addTransaction") }) {
+                            Text("+")
+                        }
+                        "watchlist" -> FloatingActionButton(onClick = { navController.navigate("addToWatchlist") }) {
+                            Text("+")
+                        }
                     }
-                    "watchlist" -> FloatingActionButton(onClick = { navController.navigate("addToWatchlist") }) {
-                        Text("+")
-                    }
+                } else {
+                    // Empty block to hide the FAB
                 }
             }
         ) { padding ->
@@ -122,12 +137,23 @@ fun PortfolioApp(context: Context) {
                     SettingsScreen(
                         isDarkTheme = darkModeState.value,
                         onToggleTheme = toggleTheme,
-                        navController = navController
+                        navController = navController,
+                        dataStoreManager = dataStoreManager
                     )
+                }
+
+                composable("editTransaction/{transactionId}") { backStackEntry ->
+                    val transactionId = backStackEntry.arguments?.getString("transactionId")?.toIntOrNull()
+                    if (transactionId != null) {
+                        EditTransactionScreen(
+                            transactionId = transactionId,
+                            transactionViewModel = transactionViewModel,
+                            navController = navController
+                        )
+                    }
                 }
             }
         }
-
     }
 }
 

@@ -19,6 +19,14 @@ fun AddToWatchlistScreen(navController: NavController, stockViewModel: StockView
     val ticker = remember { mutableStateOf("") }
     val isAddingStock by stockViewModel.isRefreshing.collectAsState(initial = false)
     val errorMessage by stockViewModel.errorMessage.collectAsState(initial = null)
+    val addSuccess = remember { mutableStateOf(false) }
+    val localError = remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(addSuccess.value) {
+        if (addSuccess.value) {
+            navController.navigateUp() // Navigate back only on success
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -43,16 +51,34 @@ fun AddToWatchlistScreen(navController: NavController, stockViewModel: StockView
             // Ticker Input
             TextField(
                 value = ticker.value,
-                onValueChange = { ticker.value = it },
+                onValueChange = {
+                    ticker.value = it
+                    localError.value = null // Reset local error on input change
+                },
                 label = { Text("Stock Ticker") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = localError.value != null,
+                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Text)
             )
+            localError.value?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
+
             Button(
                 onClick = {
-                    stockViewModel.addStockToWatchlist(ticker.value)
-                    navController.navigateUp()
+                    if (ticker.value.isBlank()) {
+                        localError.value = "Field cannot be empty"
+                    } else {
+                        stockViewModel.addStockToWatchlist(ticker.value) { success ->
+                            addSuccess.value = success
+                        }
+                    }
                 },
                 enabled = !isAddingStock
             ) {
@@ -62,10 +88,11 @@ fun AddToWatchlistScreen(navController: NavController, stockViewModel: StockView
                     Text("Add to Watchlist")
                 }
             }
+
+            // Display error messages from the ViewModel
             errorMessage?.let {
                 Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 16.dp))
             }
         }
     }
 }
-

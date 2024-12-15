@@ -9,5 +9,6 @@ data class TransactionEntity(
     val ticker: String,
     val quantity: Int,
     val purchasePrice: Double,
-    val lastPrice: Double = 0.0
+    val lastPrice: Double = 0.0,
+    val transactionType: String
 )

@@ -12,11 +12,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.stockportfoliotracker.data.models.CompanyInfo
 import com.example.stockportfoliotracker.data.models.StockEntity
 import com.example.stockportfoliotracker.network.HistoricalPrice
 import com.example.stockportfoliotracker.viewmodel.StockViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import coil.compose.AsyncImage
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,19 +28,18 @@ fun DetailScreen(
     stockViewModel: StockViewModel,
     ticker: String
 ) {
-    val stock by stockViewModel.stockDetails.collectAsState(initial = null)
-    val historicalPrices by stockViewModel.historicalPrices.collectAsState(initial = null)
+    val companyInfo by stockViewModel.companyInfo.collectAsState(initial = null)
     val errorMessage by stockViewModel.errorMessage.collectAsState(initial = null)
-    val isGraphLoading by stockViewModel.isGraphLoading.collectAsState(initial = false)
 
+    // Load company info when the screen is displayed
     LaunchedEffect(ticker) {
-        stockViewModel.loadStockDetails(ticker)
+        stockViewModel.loadCompanyInfo(ticker)
     }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Stock Details") },
+                title = { Text("Company Details") },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
@@ -54,35 +56,55 @@ fun DetailScreen(
             contentAlignment = Alignment.TopCenter
         ) {
             when {
-                stock == null && errorMessage == null -> {
+                companyInfo == null && errorMessage == null -> {
                     CircularProgressIndicator()
                 }
-                !errorMessage.isNullOrBlank() -> { // Use safe call and explicit null check
-                    Text(errorMessage!!, color = MaterialTheme.colorScheme.error) // Error message is non-null here
+                !errorMessage.isNullOrBlank() -> {
+                    Text(errorMessage!!, color = MaterialTheme.colorScheme.error)
                 }
-                stock != null -> {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        StockDetails(stock!!)
-                        Button(
-                            onClick = { stockViewModel.loadHistoricalPrices(ticker) },
-                            modifier = Modifier.align(Alignment.CenterHorizontally),
-                            enabled = !isGraphLoading
-                        ) {
-                            if (isGraphLoading) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                            } else {
-                                Text("Load Table")
-                            }
-                        }
-                        historicalPrices?.let {
-                            StockPriceTable(it)
-                        }
-                    }
+                companyInfo != null -> {
+                    CompanyDetails(companyInfo!!)
                 }
             }
         }
+    }
+}
+
+@Composable
+fun CompanyDetails(company: CompanyInfo) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Company Logo
+        AsyncImage(
+            model = company.image,
+            contentDescription = "Company Logo",
+            modifier = Modifier
+                .size(100.dp)
+                .padding(8.dp)
+        )
+
+        // General Information
+        Text(text = company.companyName, style = MaterialTheme.typography.headlineSmall)
+        Text(text = "CEO: ${company.ceo}", style = MaterialTheme.typography.bodyLarge)
+        Text(text = "Industry: ${company.industry}", style = MaterialTheme.typography.bodyLarge)
+        Text(text = "Website: ${company.website}", style = MaterialTheme.typography.bodyLarge)
+        //Text(
+        //    text = company.description,
+        //    style = MaterialTheme.typography.bodyMedium,
+        //    modifier = Modifier.padding(8.dp)
+        //)
+
+        // Statistics
+        Divider()
+        Text("Statistics", style = MaterialTheme.typography.headlineSmall)
+        Text(text = "Market Cap: ${company.mktCap} USD", style = MaterialTheme.typography.bodyLarge)
+        Text(text = "Fulltime Employees: ${company.fullTimeEmployees}", style = MaterialTheme.typography.bodyLarge)
+        Text(text = "Beta: ${company.beta}", style = MaterialTheme.typography.bodyLarge)
+        Text(text = "Volume Avg: ${company.volAvg}", style = MaterialTheme.typography.bodyLarge)
+        Text(text = "Last Dividend: ${company.lastDiv} USD", style = MaterialTheme.typography.bodyLarge)
+        Text(text = "Range: ${company.range}", style = MaterialTheme.typography.bodyLarge)
     }
 }
 

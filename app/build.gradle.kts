@@ -89,5 +89,5 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.material3)
     implementation(libs.okhttp.logging)
-
+    implementation(libs.coil.compose)
 }

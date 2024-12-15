@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.stockportfoliotracker.data.StockDatabase
+import com.example.stockportfoliotracker.data.models.CompanyInfo
 import com.example.stockportfoliotracker.data.models.StockEntity
 import com.example.stockportfoliotracker.network.HistoricalPrice
 import com.example.stockportfoliotracker.network.RetrofitClient
@@ -32,6 +33,9 @@ class StockViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _isGraphLoading = MutableStateFlow(false)
     val isGraphLoading: StateFlow<Boolean> = _isGraphLoading
+
+    private val _companyInfo = MutableStateFlow<CompanyInfo?>(null)
+    val companyInfo: StateFlow<CompanyInfo?> = _companyInfo
 
     init {
         loadStocks()
@@ -164,10 +168,10 @@ class StockViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun addStockToWatchlist(ticker: String) {
+    fun addStockToWatchlist(ticker: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
             try {
-                val response = RetrofitClient.api.getStockQuote(symbol = ticker)
+                val response = RetrofitClient.api.getStockQuote(ticker)
                 if (response.isNotEmpty()) {
                     val stockQuote = response.first()
                     val stock = StockEntity(
@@ -177,16 +181,20 @@ class StockViewModel(application: Application) : AndroidViewModel(application) {
                         change = "${stockQuote.change} (${stockQuote.changesPercentage}%)"
                     )
                     stockDao.insertStock(stock)
-                    loadStocks()
+                    _errorMessage.value = null
+                    onResult(true) // Success
                 } else {
                     _errorMessage.value = "Stock details not found."
+                    onResult(false) // Failure
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 _errorMessage.value = "Failed to add stock to watchlist."
+                onResult(false) // Failure
             }
         }
     }
+
 
     fun addStockToPortfolio(ticker: String, quantity: Int, purchasePrice: Double) {
         viewModelScope.launch {
@@ -214,5 +222,21 @@ class StockViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun loadCompanyInfo(ticker: String) {
+        viewModelScope.launch {
+            _errorMessage.value = null
+            try {
+                val response = RetrofitClient.api.getCompanyInfo(symbol = ticker)
+                if (response.isNotEmpty()) {
+                    _companyInfo.value = response.first()
+                } else {
+                    _errorMessage.value = "Company info not found."
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _errorMessage.value = "Failed to load company info."
+            }
+        }
+    }
 
 }

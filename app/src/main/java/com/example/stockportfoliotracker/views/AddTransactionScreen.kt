@@ -20,6 +20,18 @@ fun AddTransactionScreen(navController: NavController, transactionViewModel: Tra
     val ticker = remember { mutableStateOf("") }
     val quantity = remember { mutableStateOf("") }
     val purchasePrice = remember { mutableStateOf("") }
+    val transactionType = remember { mutableStateOf("Buy") }
+    val localError = remember { mutableStateOf<String?>(null) }
+    var isDropdownExpanded by remember { mutableStateOf(false) } // Dropdown state
+    val netAvailableQuantity = remember { mutableStateOf(0) }
+
+    // Fetch net available quantity for the ticker when it changes
+    LaunchedEffect(ticker.value) {
+        if (ticker.value.isNotBlank()) {
+            netAvailableQuantity.value =
+                transactionViewModel.getNetQuantityForTicker(ticker.value)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -44,8 +56,12 @@ fun AddTransactionScreen(navController: NavController, transactionViewModel: Tra
             // Ticker Input
             TextField(
                 value = ticker.value,
-                onValueChange = { ticker.value = it },
+                onValueChange = {
+                    ticker.value = it
+                    localError.value = null // Reset error on input change
+                },
                 label = { Text("Stock Ticker") },
+                isError = localError.value != null,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -53,9 +69,13 @@ fun AddTransactionScreen(navController: NavController, transactionViewModel: Tra
             // Quantity Input
             TextField(
                 value = quantity.value,
-                onValueChange = { quantity.value = it },
+                onValueChange = {
+                    quantity.value = it
+                    localError.value = null
+                },
                 label = { Text("Quantity") },
                 keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                isError = localError.value != null,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -63,26 +83,79 @@ fun AddTransactionScreen(navController: NavController, transactionViewModel: Tra
             // Purchase Price Input
             TextField(
                 value = purchasePrice.value,
-                onValueChange = { purchasePrice.value = it },
+                onValueChange = {
+                    purchasePrice.value = it
+                    localError.value = null
+                },
                 label = { Text("Purchase Price") },
                 keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+                isError = localError.value != null,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Transaction Type Toggle
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Transaction Type: ", style = MaterialTheme.typography.bodyMedium)
+                Box {
+                    TextButton(onClick = { isDropdownExpanded = true }) {
+                        Text(transactionType.value)
+                    }
+                    DropdownMenu(
+                        expanded = isDropdownExpanded,
+                        onDismissRequest = { isDropdownExpanded = false }
+                    ) {
+                        DropdownMenuItem(onClick = {
+                            transactionType.value = "Buy"
+                            isDropdownExpanded = false
+                        }, text = { Text("Buy") })
+                        DropdownMenuItem(onClick = {
+                            transactionType.value = "Sell"
+                            isDropdownExpanded = false
+                        }, text = { Text("Sell") })
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Add Transaction Button
             Button(
                 onClick = {
-                    transactionViewModel.addTransaction(
-                        TransactionEntity(
-                            ticker = ticker.value,
-                            quantity = quantity.value.toIntOrNull() ?: 0,
-                            purchasePrice = purchasePrice.value.toDoubleOrNull() ?: 0.0
-                        )
-                    )
-                    navController.navigateUp()
+                    val quantityInt = quantity.value.toIntOrNull()
+                    val priceDouble = purchasePrice.value.toDoubleOrNull()
+
+                    when {
+                        ticker.value.isBlank() -> localError.value = "Ticker cannot be empty"
+                        quantityInt == null || quantityInt <= 0 -> localError.value = "Quantity must be a positive number"
+                        priceDouble == null || priceDouble <= 0 -> localError.value = "Price must be a positive number"
+                        transactionType.value == "Sell" && quantityInt > netAvailableQuantity.value -> {
+                            localError.value =
+                                "Cannot sell more than available quantity (${netAvailableQuantity.value})"
+                        }
+                        else -> {
+                            transactionViewModel.addTransaction(
+                                TransactionEntity(
+                                    ticker = ticker.value,
+                                    quantity = if (transactionType.value == "Buy") quantityInt else -quantityInt,
+                                    purchasePrice = priceDouble,
+                                    transactionType = transactionType.value
+                                )
+                            )
+                            navController.navigateUp()
+                        }
+                    }
                 }
             ) {
                 Text("Add Transaction")
+            }
+
+            // Display error message if any
+            localError.value?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 16.dp))
             }
         }
     }
