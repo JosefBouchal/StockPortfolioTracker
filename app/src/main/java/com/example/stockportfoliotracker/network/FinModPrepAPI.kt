@@ -17,7 +17,6 @@ interface FinancialModelingPrepApi {
         @Path("symbol") symbol: String,
         @Query("apikey") apiKey: String = BuildConfig.FINANCIAL_MODELING_PREP_API_KEY
     ): HistoricalPricesResponse
-
 }
 
 data class StockQuoteResponse(

@@ -5,10 +5,12 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.stockportfoliotracker.data.models.StockEntity
+import com.example.stockportfoliotracker.data.models.TransactionEntity
 
-@Database(entities = [StockEntity::class], version = 1, exportSchema = false)
+@Database(entities = [StockEntity::class, TransactionEntity::class], version = 4)
 abstract class StockDatabase : RoomDatabase() {
     abstract fun stockDao(): StockDao
+    abstract fun transactionDao(): TransactionDao
 
     companion object {
         @Volatile
@@ -20,10 +22,13 @@ abstract class StockDatabase : RoomDatabase() {
                     context.applicationContext,
                     StockDatabase::class.java,
                     "stock_database"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
                 INSTANCE = instance
                 instance
             }
         }
     }
 }
+

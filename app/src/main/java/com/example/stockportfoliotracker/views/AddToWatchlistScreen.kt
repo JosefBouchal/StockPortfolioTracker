@@ -1,19 +1,21 @@
 package com.example.stockportfoliotracker.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.stockportfoliotracker.viewmodel.StockViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddStockScreen(navController: NavController, stockViewModel: StockViewModel) {
+fun AddToWatchlistScreen(navController: NavController, stockViewModel: StockViewModel) {
     val ticker = remember { mutableStateOf("") }
     val isAddingStock by stockViewModel.isRefreshing.collectAsState(initial = false)
     val errorMessage by stockViewModel.errorMessage.collectAsState(initial = null)
@@ -21,7 +23,7 @@ fun AddStockScreen(navController: NavController, stockViewModel: StockViewModel)
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Add Stock") },
+                title = { Text("Add to Watchlist") },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
                         Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
@@ -38,28 +40,26 @@ fun AddStockScreen(navController: NavController, stockViewModel: StockViewModel)
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // Ticker Input
             TextField(
                 value = ticker.value,
                 onValueChange = { ticker.value = it },
                 label = { Text("Stock Ticker") },
                 modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
-                    stockViewModel.loadStockDetails(ticker.value) { success ->
-                        if (success) {
-                            navController.navigateUp() // Navigate back on success
-                        }
-                    }
+                    stockViewModel.addStockToWatchlist(ticker.value)
+                    navController.navigateUp()
                 },
-                modifier = Modifier.align(Alignment.CenterHorizontally),
                 enabled = !isAddingStock
             ) {
                 if (isAddingStock) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp))
                 } else {
-                    Text("Add Stock")
+                    Text("Add to Watchlist")
                 }
             }
             errorMessage?.let {
@@ -68,3 +68,4 @@ fun AddStockScreen(navController: NavController, stockViewModel: StockViewModel)
         }
     }
 }
+

@@ -12,7 +12,27 @@ import androidx.navigation.compose.rememberNavController
 import com.example.stockportfoliotracker.data.DataStoreManager
 import com.example.stockportfoliotracker.ui.*
 import com.example.stockportfoliotracker.viewmodel.StockViewModel
+import com.example.stockportfoliotracker.viewmodel.TransactionViewModel
+import com.example.stockportfoliotracker.views.AddTransactionScreen
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.stockportfoliotracker.ui.AddToWatchlistScreen
+import com.example.stockportfoliotracker.views.PortfolioScreen
+import com.example.stockportfoliotracker.views.WatchlistScreen
 
 @Composable
 fun PortfolioApp(context: Context) {
@@ -21,6 +41,7 @@ fun PortfolioApp(context: Context) {
 
     val navController = rememberNavController()
     val stockViewModel: StockViewModel = viewModel()
+    val transactionViewModel: TransactionViewModel = viewModel()
     val coroutineScope = rememberCoroutineScope()
 
     // Toggle dark mode and save to DataStore
@@ -39,27 +60,122 @@ fun PortfolioApp(context: Context) {
     MaterialTheme(
         colorScheme = colorScheme
     ) {
-        NavHost(navController = navController, startDestination = "home") {
-            composable("home") {
-                HomeScreen(
-                    navController = navController,
-                    stockViewModel = stockViewModel
+        var selectedTab by remember { mutableStateOf("portfolio") }
+
+        Scaffold(
+            bottomBar = {
+                BottomNavigationBar(
+                    selectedTab = selectedTab,
+                    onTabSelected = { selectedTab = it },
+                    navController = navController
                 )
+            },
+            floatingActionButton = {
+                when (selectedTab) {
+                    "portfolio" -> FloatingActionButton(onClick = { navController.navigate("addTransaction") }) {
+                        Text("+")
+                    }
+                    "watchlist" -> FloatingActionButton(onClick = { navController.navigate("addToWatchlist") }) {
+                        Text("+")
+                    }
+                }
             }
-            composable("addStock") {
-                AddStockScreen(navController, stockViewModel)
-            }
-            composable("detail/{ticker}") { backStackEntry ->
-                val ticker = backStackEntry.arguments?.getString("ticker") ?: ""
-                DetailScreen(navController, stockViewModel, ticker)
-            }
-            composable("settings") {
-                SettingsScreen(
-                    isDarkTheme = darkModeState.value,
-                    onToggleTheme = toggleTheme,
-                    navController
-                )
+        ) { padding ->
+            NavHost(
+                navController = navController,
+                startDestination = "portfolio",
+                modifier = Modifier.padding(padding)
+            ) {
+                composable("portfolio") {
+                    PortfolioScreen(
+                        transactionViewModel = transactionViewModel,
+                        navController = navController
+                    )
+                }
+                composable("watchlist") {
+                    WatchlistScreen(
+                        stockViewModel = stockViewModel,
+                        navController = navController
+                    )
+                }
+                composable("addTransaction") {
+                    AddTransactionScreen(
+                        navController = navController,
+                        transactionViewModel = transactionViewModel
+                    )
+                }
+                composable("addToWatchlist") {
+                    AddToWatchlistScreen(
+                        navController = navController,
+                        stockViewModel = stockViewModel
+                    )
+                }
+                composable("detail/{ticker}") { backStackEntry ->
+                    val ticker = backStackEntry.arguments?.getString("ticker") ?: ""
+                    DetailScreen(
+                        navController = navController,
+                        stockViewModel = stockViewModel,
+                        ticker = ticker
+                    )
+                }
+                composable("settings") {
+                    SettingsScreen(
+                        isDarkTheme = darkModeState.value,
+                        onToggleTheme = toggleTheme,
+                        navController = navController
+                    )
+                }
             }
         }
+
+    }
+}
+
+@Composable
+fun BottomNavigationBar(
+    selectedTab: String,
+    onTabSelected: (String) -> Unit,
+    navController: NavController
+) {
+    NavigationBar {
+        NavigationBarItem(
+            selected = selectedTab == "portfolio",
+            onClick = {
+                onTabSelected("portfolio")
+                navController.navigate("portfolio") {
+                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            icon = { Icon(Icons.Default.Inventory, contentDescription = "Portfolio") },
+            label = { Text("Portfolio") }
+        )
+        NavigationBarItem(
+            selected = selectedTab == "watchlist",
+            onClick = {
+                onTabSelected("watchlist")
+                navController.navigate("watchlist") {
+                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            icon = { Icon(Icons.Default.Visibility, contentDescription = "Watchlist") },
+            label = { Text("Watchlist") }
+        )
+        NavigationBarItem(
+            selected = selectedTab == "settings",
+            onClick = {
+                onTabSelected("settings")
+                navController.navigate("settings") {
+                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+            label = { Text("Settings") }
+        )
     }
 }

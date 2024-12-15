@@ -163,4 +163,56 @@ class StockViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    fun addStockToWatchlist(ticker: String) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.api.getStockQuote(symbol = ticker)
+                if (response.isNotEmpty()) {
+                    val stockQuote = response.first()
+                    val stock = StockEntity(
+                        ticker = stockQuote.symbol,
+                        name = stockQuote.name,
+                        price = stockQuote.price,
+                        change = "${stockQuote.change} (${stockQuote.changesPercentage}%)"
+                    )
+                    stockDao.insertStock(stock)
+                    loadStocks()
+                } else {
+                    _errorMessage.value = "Stock details not found."
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _errorMessage.value = "Failed to add stock to watchlist."
+            }
+        }
+    }
+
+    fun addStockToPortfolio(ticker: String, quantity: Int, purchasePrice: Double) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.api.getStockQuote(symbol = ticker)
+                if (response.isNotEmpty()) {
+                    val stockQuote = response.first()
+                    val stock = StockEntity(
+                        ticker = stockQuote.symbol,
+                        name = stockQuote.name,
+                        price = stockQuote.price,
+                        change = "${stockQuote.change} (${stockQuote.changesPercentage}%)",
+                        quantity = quantity,
+                        purchasePrice = purchasePrice
+                    )
+                    stockDao.insertStock(stock)
+                    loadStocks()
+                } else {
+                    _errorMessage.value = "Stock details not found."
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _errorMessage.value = "Failed to add stock to portfolio."
+            }
+        }
+    }
+
+
 }

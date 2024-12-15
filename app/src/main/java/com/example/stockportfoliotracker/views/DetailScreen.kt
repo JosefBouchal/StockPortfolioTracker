@@ -20,7 +20,11 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetailScreen(navController: NavController, stockViewModel: StockViewModel, ticker: String) {
+fun DetailScreen(
+    navController: NavController,
+    stockViewModel: StockViewModel,
+    ticker: String
+) {
     val stock by stockViewModel.stockDetails.collectAsState(initial = null)
     val historicalPrices by stockViewModel.historicalPrices.collectAsState(initial = null)
     val errorMessage by stockViewModel.errorMessage.collectAsState(initial = null)
