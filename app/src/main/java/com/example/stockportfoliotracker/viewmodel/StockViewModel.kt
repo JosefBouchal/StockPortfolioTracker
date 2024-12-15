@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.stockportfoliotracker.data.StockDatabase
 import com.example.stockportfoliotracker.data.StockEntity
+import com.example.stockportfoliotracker.network.HistoricalPrice
 import com.example.stockportfoliotracker.network.RetrofitClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -82,5 +83,18 @@ class StockViewModel(application: Application) : AndroidViewModel(application) {
             stockDao.getStockByTicker(ticker)
         }
     }
+
+    fun fetchHistoricalPrices(ticker: String, onResult: (List<HistoricalPrice>?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.api.getHistoricalPrices(symbol = ticker)
+                onResult(response.historical)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(null)
+            }
+        }
+    }
+
 
 }
