@@ -6,25 +6,24 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-    private const val BASE_URL = "https://www.alphavantage.co/"
+    private const val BASE_URL = "https://financialmodelingprep.com/"
 
-    // Create an instance of OkHttpClient with a logging interceptor
     private val httpClient: OkHttpClient by lazy {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY // Log request and response bodies
+            level = HttpLoggingInterceptor.Level.BODY
         }
         OkHttpClient.Builder()
-            .addInterceptor(loggingInterceptor) // Add logging interceptor
+            .addInterceptor(loggingInterceptor)
             .build()
     }
 
-    // Create an instance of Retrofit
-    val api: AlphaVantageApi by lazy {
+    val api: FinancialModelingPrepApi by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create()) // Convert JSON to Kotlin objects
-            .client(httpClient) // Add the OkHttp client
+            .addConverterFactory(GsonConverterFactory.create())
+            .client(httpClient)
             .build()
-            .create(AlphaVantageApi::class.java) // Create the API interface
+            .create(FinancialModelingPrepApi::class.java)
     }
 }
+

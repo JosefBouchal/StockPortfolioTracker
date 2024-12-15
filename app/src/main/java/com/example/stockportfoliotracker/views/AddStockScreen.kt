@@ -41,13 +41,14 @@ fun AddStockScreen(navController: NavController, stockViewModel: StockViewModel)
             Button(
                 onClick = {
                     isLoading.value = true
-                    stockViewModel.fetchStockDetails(ticker.value) { stock ->
+                    errorMessage.value = null
+                    stockViewModel.fetchStockQuote(ticker.value) { stock ->
                         isLoading.value = false
                         if (stock != null) {
                             stockViewModel.addStock(stock)
                             navController.navigateUp()
                         } else {
-                            errorMessage.value = "Failed to fetch stock data."
+                            errorMessage.value = "Failed to fetch stock data. Please check the ticker."
                         }
                     }
                 },

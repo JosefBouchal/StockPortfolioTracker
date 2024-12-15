@@ -17,4 +17,7 @@ interface StockDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertStockList(stocks: List<StockEntity>)
 
+    @Query("SELECT * FROM stocks WHERE ticker = :ticker LIMIT 1")
+    suspend fun getStockByTicker(ticker: String): StockEntity?
+
 }

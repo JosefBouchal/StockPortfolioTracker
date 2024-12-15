@@ -28,13 +28,8 @@ fun HomeScreen(navController: NavController, stockViewModel: StockViewModel) {
             CenterAlignedTopAppBar(
                 title = { Text("My Stocks") },
                 actions = {
-                    IconButton(onClick = {
-                        stockViewModel.refreshAllStocks { }
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh Stocks"
-                        )
+                    IconButton(onClick = { stockViewModel.refreshAllStocks { } }) {
+                        Icon(imageVector = Icons.Default.Refresh, contentDescription = "Refresh Stocks")
                     }
                 }
             )
@@ -45,7 +40,7 @@ fun HomeScreen(navController: NavController, stockViewModel: StockViewModel) {
             }
         }
     ) { padding ->
-        StockList(stocks, navController, stockViewModel, modifier = Modifier.padding(padding))
+        StockList(stocks, navController, stockViewModel, Modifier.padding(padding))
     }
 }
 

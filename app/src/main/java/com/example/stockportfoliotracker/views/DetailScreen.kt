@@ -24,13 +24,21 @@ fun DetailScreen(navController: NavController, stockViewModel: StockViewModel, t
     val isLoading = remember { mutableStateOf(true) }
     val errorMessage = remember { mutableStateOf<String?>(null) }
 
+    // Check database and fetch data only if necessary
     LaunchedEffect(ticker) {
-        stockViewModel.fetchStockDetails(ticker) { result ->
+        val localStock = stockViewModel.getStockFromDatabase(ticker)
+        if (localStock != null) {
+            stock.value = localStock
             isLoading.value = false
-            if (result != null) {
-                stock.value = result
-            } else {
-                errorMessage.value = "Failed to load stock details."
+        } else {
+            stockViewModel.fetchStockQuote(ticker) { result ->
+                isLoading.value = false
+                if (result != null) {
+                    stock.value = result
+                    stockViewModel.addStock(result) // Save to database
+                } else {
+                    errorMessage.value = "Failed to load stock details."
+                }
             }
         }
     }

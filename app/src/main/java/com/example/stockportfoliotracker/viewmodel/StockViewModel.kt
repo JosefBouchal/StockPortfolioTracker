@@ -9,10 +9,10 @@ import com.example.stockportfoliotracker.network.RetrofitClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 class StockViewModel(application: Application) : AndroidViewModel(application) {
     private val stockDao = StockDatabase.getDatabase(application).stockDao()
-
     val allStocks: Flow<List<StockEntity>> = stockDao.getAllStocks()
 
     fun addStock(stock: StockEntity) {
@@ -27,32 +27,21 @@ class StockViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Fetches detailed stock information including price, name, and change.
-     * @param ticker Stock ticker symbol
-     * @param onResult Callback with fetched StockEntity or null in case of failure
-     */
-    fun fetchStockDetails(ticker: String, onResult: (StockEntity?) -> Unit) {
+    fun fetchStockQuote(ticker: String, onResult: (StockEntity?) -> Unit) {
         viewModelScope.launch {
             try {
-                // Fetch the stock price, change, and change percent
-                val globalQuoteResponse = RetrofitClient.api.getStockPrice(symbol = ticker)
-                val globalQuote = globalQuoteResponse.globalQuote
-
-                // Fetch the stock name
-                val symbolSearchResponse = RetrofitClient.api.searchStock(keywords = ticker)
-                val bestMatch = symbolSearchResponse.bestMatches.firstOrNull()
-
-                if (globalQuote != null && bestMatch != null) {
+                val response = RetrofitClient.api.getStockQuote(symbol = ticker)
+                if (response.isNotEmpty()) {
+                    val stockQuote = response.first()
                     val stock = StockEntity(
-                        ticker = globalQuote.symbol,
-                        name = bestMatch.name, // Retrieve stock name
-                        price = globalQuote.price.toDoubleOrNull() ?: 0.0,
-                        change = "${globalQuote.change} (${globalQuote.changePercent})" // Combine change and percent
+                        ticker = stockQuote.symbol,
+                        name = stockQuote.name,
+                        price = stockQuote.price,
+                        change = "${stockQuote.change} (${stockQuote.changesPercentage}%)"
                     )
                     onResult(stock)
                 } else {
-                    onResult(null) // Handle missing data gracefully
+                    onResult(null)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -66,29 +55,32 @@ class StockViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val updatedStocks = allStocks.first().mapNotNull { stock ->
                     try {
-                        // Fetch updated stock details
-                        val response = RetrofitClient.api.getStockPrice(symbol = stock.ticker)
-                        val globalQuote = response.globalQuote
-
-                        // Create an updated StockEntity
-                        stock.copy(
-                            price = globalQuote.price.toDoubleOrNull() ?: stock.price,
-                            change = "${globalQuote.change} (${globalQuote.changePercent})"
-                        )
+                        val response = RetrofitClient.api.getStockQuote(symbol = stock.ticker)
+                        if (response.isNotEmpty()) {
+                            val stockQuote = response.first()
+                            stock.copy(
+                                price = stockQuote.price,
+                                change = "${stockQuote.change} (${stockQuote.changesPercentage}%)"
+                            )
+                        } else null
                     } catch (e: Exception) {
-                        e.printStackTrace() // Handle individual stock fetch errors gracefully
+                        e.printStackTrace()
                         null
                     }
                 }
-                // Update all stocks in the database
-                stockDao.insertStockList(updatedStocks) // Assuming you add a batch insert method
+                stockDao.insertStockList(updatedStocks)
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
-                onComplete() // Notify UI when refresh is done
+                onComplete()
             }
         }
     }
 
-}
+    fun getStockFromDatabase(ticker: String): StockEntity? {
+        return runBlocking {
+            stockDao.getStockByTicker(ticker)
+        }
+    }
 
+}

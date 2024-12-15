@@ -18,9 +18,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        //buildConfigField("String", "ALPHA_VANTAGE_API_KEY", "\"YVCBLSWG6DB0P0QW\"")
-        //buildConfigField("String", "ALPHA_VANTAGE_API_KEY", "\"4WL40438YTS425HJ\"")
-        buildConfigField("String", "ALPHA_VANTAGE_API_KEY", "\"H1VL0QM5TYMB2SRE\"")
+        // API key for Financial Modeling Prep
+        buildConfigField("String", "FINANCIAL_MODELING_PREP_API_KEY", "\"t6cZm28jGAibO6hvdQFeWnF2zNNVNBBU\"")
     }
 
     buildTypes {
@@ -85,5 +84,7 @@ dependencies {
     implementation(libs.androidx.material)
 
     implementation(libs.androidx.lifecycle.runtime.compose)
+
+    implementation("androidx.core:core-splashscreen:1.0.1")
 
 }
