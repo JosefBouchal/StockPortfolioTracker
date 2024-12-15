@@ -1,4 +1,4 @@
-package com.example.stockportfoliotracker.data
+package com.example.stockportfoliotracker.data.models
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

@@ -1,59 +1,33 @@
 package com.example.stockportfoliotracker.ui
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.stockportfoliotracker.data.StockEntity
-import com.example.stockportfoliotracker.viewmodel.StockViewModel
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
+import com.example.stockportfoliotracker.data.models.StockEntity
 import com.example.stockportfoliotracker.network.HistoricalPrice
+import com.example.stockportfoliotracker.viewmodel.StockViewModel
 import java.text.SimpleDateFormat
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.Calendar
-import java.util.Locale
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailScreen(navController: NavController, stockViewModel: StockViewModel, ticker: String) {
-    val stock = remember { mutableStateOf<StockEntity?>(null) }
-    val historicalPrices = remember { mutableStateOf<List<HistoricalPrice>?>(null) }
-    val isLoading = remember { mutableStateOf(true) }
-    val errorMessage = remember { mutableStateOf<String?>(null) }
-    val isGraphLoading = remember { mutableStateOf(false) }
+    val stock by stockViewModel.stockDetails.collectAsState(initial = null)
+    val historicalPrices by stockViewModel.historicalPrices.collectAsState(initial = null)
+    val errorMessage by stockViewModel.errorMessage.collectAsState(initial = null)
+    val isGraphLoading by stockViewModel.isGraphLoading.collectAsState(initial = false)
 
     LaunchedEffect(ticker) {
-        val localStock = stockViewModel.getStockFromDatabase(ticker)
-        if (localStock != null) {
-            stock.value = localStock
-            isLoading.value = false
-        } else {
-            stockViewModel.fetchStockQuote(ticker) { result ->
-                isLoading.value = false
-                if (result != null) {
-                    stock.value = result
-                    stockViewModel.addStock(result)
-                } else {
-                    errorMessage.value = "Failed to load stock details."
-                }
-            }
-        }
+        stockViewModel.loadStockDetails(ticker)
     }
 
     Scaffold(
@@ -76,33 +50,29 @@ fun DetailScreen(navController: NavController, stockViewModel: StockViewModel, t
             contentAlignment = Alignment.TopCenter
         ) {
             when {
-                isLoading.value -> CircularProgressIndicator()
-                errorMessage.value != null -> Text(errorMessage.value!!, color = MaterialTheme.colorScheme.error)
-                stock.value != null -> {
+                stock == null && errorMessage == null -> {
+                    CircularProgressIndicator()
+                }
+                !errorMessage.isNullOrBlank() -> { // Use safe call and explicit null check
+                    Text(errorMessage!!, color = MaterialTheme.colorScheme.error) // Error message is non-null here
+                }
+                stock != null -> {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        StockDetails(stock.value!!)
+                        StockDetails(stock!!)
                         Button(
-                            onClick = {
-                                isGraphLoading.value = true
-                                stockViewModel.fetchHistoricalPrices(ticker) { prices ->
-                                    isGraphLoading.value = false
-                                    if (prices != null) {
-                                        historicalPrices.value = prices
-                                    } else {
-                                        errorMessage.value = "Failed to load historical data."
-                                    }
-                                }
-                            },
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                            onClick = { stockViewModel.loadHistoricalPrices(ticker) },
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                            enabled = !isGraphLoading
                         ) {
-                            Text("Load Table")
+                            if (isGraphLoading) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                            } else {
+                                Text("Load Table")
+                            }
                         }
-                        if (isGraphLoading.value) {
-                            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-                        }
-                        historicalPrices.value?.let {
+                        historicalPrices?.let {
                             StockPriceTable(it)
                         }
                     }
@@ -135,25 +105,35 @@ fun StockPriceTable(prices: List<HistoricalPrice>) {
     val monthlyPrices = prices.filter {
         val priceDate = dateFormat.parse(it.date)
         priceDate != null && priceDate.after(lastYear)
-    }.groupBy { it.date.substring(0, 7) } // Group by Year-Month (e.g., 2024-06)
+    }.groupBy { it.date.substring(0, 7) }
 
-    // Calculate differences and percentage changes
+    // Prepare the list of months sorted in descending order
+    val sortedMonths = monthlyPrices.keys.sortedDescending()
+
+    // Calculate the table data: Month, Average Price, Change %
     val tableData = mutableListOf<Triple<String, Double, String>>()
-    var previousPrice: Double? = null
+    for (i in sortedMonths.indices) {
+        val currentMonth = sortedMonths[i]
+        val currentPrice = monthlyPrices[currentMonth]?.map { it.close }?.average() ?: 0.0
 
-    for ((month, pricesInMonth) in monthlyPrices) {
-        val avgPrice = pricesInMonth.map { it.close }.average() // Average price in the month
-        val percentageChange = if (previousPrice != null) {
-            val change = ((avgPrice - previousPrice) / previousPrice) * 100
-            "%.2f%%".format(change)
+        val changePercentage = if (i + 1 < sortedMonths.size) {
+            val previousMonth = sortedMonths[i + 1]
+            val previousPrice = monthlyPrices[previousMonth]?.map { it.close }?.average() ?: 0.0
+
+            if (previousPrice != 0.0) {
+                val change = ((currentPrice - previousPrice) / previousPrice) * 100
+                "%.2f%%".format(change) // Calculate change %
+            } else {
+                "N/A"
+            }
         } else {
-            "N/A"
+            "N/A" // No previous month to compare for the last month
         }
-        tableData.add(Triple(month, avgPrice, percentageChange))
-        previousPrice = avgPrice
+
+        tableData.add(Triple(currentMonth, currentPrice, changePercentage))
     }
 
-    // Display the table in a LazyColumn
+    // Display the table
     Column(modifier = Modifier.padding(16.dp)) {
         Text("Monthly Price Table", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(8.dp))
@@ -161,6 +141,7 @@ fun StockPriceTable(prices: List<HistoricalPrice>) {
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Table header
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Month", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
@@ -168,17 +149,19 @@ fun StockPriceTable(prices: List<HistoricalPrice>) {
                     Text("Change %", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 }
             }
+
+            // Table rows
             items(tableData) { (month, price, change) ->
                 val changeColor = when {
-                    change.contains("-") -> Color.Red     // Negative change
-                    change != "N/A" -> Color.Green       // Positive change
-                    else -> Color.Unspecified            // Default color for "N/A"
+                    change.startsWith("-") -> Color.Red
+                    change != "N/A" -> Color.Green
+                    else -> Color.Unspecified
                 }
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(month, modifier = Modifier.weight(1f))
                     Text("$%.2f".format(price), modifier = Modifier.weight(1f))
-                    Text(change, color = changeColor, modifier = Modifier.weight(1f)) // Apply color
+                    Text(change, color = changeColor, modifier = Modifier.weight(1f))
                 }
             }
         }

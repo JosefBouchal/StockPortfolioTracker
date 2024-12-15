@@ -1,6 +1,7 @@
 package com.example.stockportfoliotracker.data
 
 import androidx.room.*
+import com.example.stockportfoliotracker.data.models.StockEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao

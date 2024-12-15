@@ -1,9 +1,10 @@
-package com.example.stockportfoliotracker.ui.theme
+package com.example.stockportfoliotracker.viewmodel
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.example.stockportfoliotracker.ui.theme.Typography
 
 private val LightColorScheme = lightColorScheme(
     primary = Color(0xFF6200EE),

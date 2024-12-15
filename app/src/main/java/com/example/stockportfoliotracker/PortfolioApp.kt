@@ -43,9 +43,7 @@ fun PortfolioApp(context: Context) {
             composable("home") {
                 HomeScreen(
                     navController = navController,
-                    stockViewModel = stockViewModel,
-                    isDarkTheme = darkModeState.value,
-                    onToggleTheme = toggleTheme
+                    stockViewModel = stockViewModel
                 )
             }
             composable("addStock") {
@@ -58,7 +56,8 @@ fun PortfolioApp(context: Context) {
             composable("settings") {
                 SettingsScreen(
                     isDarkTheme = darkModeState.value,
-                    onToggleTheme = toggleTheme
+                    onToggleTheme = toggleTheme,
+                    navController
                 )
             }
         }

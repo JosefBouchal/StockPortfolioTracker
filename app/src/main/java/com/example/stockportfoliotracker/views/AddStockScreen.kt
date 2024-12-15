@@ -1,6 +1,8 @@
 package com.example.stockportfoliotracker.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,13 +15,18 @@ import com.example.stockportfoliotracker.viewmodel.StockViewModel
 @Composable
 fun AddStockScreen(navController: NavController, stockViewModel: StockViewModel) {
     val ticker = remember { mutableStateOf("") }
-    val isLoading = remember { mutableStateOf(false) }
-    val errorMessage = remember { mutableStateOf<String?>(null) }
+    val isAddingStock by stockViewModel.isRefreshing.collectAsState(initial = false)
+    val errorMessage by stockViewModel.errorMessage.collectAsState(initial = null)
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Add Stock") }
+                title = { Text("Add Stock") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.navigateUp() }) {
+                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
             )
         }
     ) { padding ->
@@ -40,26 +47,22 @@ fun AddStockScreen(navController: NavController, stockViewModel: StockViewModel)
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
-                    isLoading.value = true
-                    errorMessage.value = null
-                    stockViewModel.fetchStockQuote(ticker.value) { stock ->
-                        isLoading.value = false
-                        if (stock != null) {
-                            stockViewModel.addStock(stock)
-                            navController.navigateUp()
-                        } else {
-                            errorMessage.value = "Failed to fetch stock data. Please check the ticker."
+                    stockViewModel.loadStockDetails(ticker.value) { success ->
+                        if (success) {
+                            navController.navigateUp() // Navigate back on success
                         }
                     }
                 },
-                modifier = Modifier.align(Alignment.CenterHorizontally)
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+                enabled = !isAddingStock
             ) {
-                Text("Add Stock")
+                if (isAddingStock) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                } else {
+                    Text("Add Stock")
+                }
             }
-            if (isLoading.value) {
-                CircularProgressIndicator(modifier = Modifier.padding(top = 16.dp))
-            }
-            errorMessage.value?.let {
+            errorMessage?.let {
                 Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 16.dp))
             }
         }

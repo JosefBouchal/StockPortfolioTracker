@@ -8,7 +8,7 @@ import androidx.activity.compose.setContent
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        requestWindowFeature(Window.FEATURE_NO_TITLE)
         window.statusBarColor=this.resources.getColor(R.color.black)
         setContent {
             PortfolioApp(context = this) // Pass context to PortfolioApp
