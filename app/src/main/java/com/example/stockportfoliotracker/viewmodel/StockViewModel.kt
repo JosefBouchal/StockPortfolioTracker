@@ -152,21 +152,23 @@ class StockViewModel(application: Application) : AndroidViewModel(application) {
     /**
      * Fetch historical prices for a stock and update state.
      */
-    fun loadHistoricalPrices(ticker: String) {
+    fun loadHistoricalPrices(ticker: String, onComplete: () -> Unit = {}) {
         viewModelScope.launch {
             _isGraphLoading.value = true
             _errorMessage.value = null
             try {
                 val response = RetrofitClient.api.getHistoricalPrices(symbol = ticker)
-                _historicalPrices.value = response.historical
+                _historicalPrices.value = response.historical ?: emptyList() // Safeguard against null response
             } catch (e: Exception) {
                 e.printStackTrace()
                 _errorMessage.value = "Failed to load historical prices."
             } finally {
                 _isGraphLoading.value = false
+                onComplete() // Call the callback to notify completion
             }
         }
     }
+
 
     fun addStockToWatchlist(ticker: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {

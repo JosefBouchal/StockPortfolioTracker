@@ -1,13 +1,16 @@
 package com.example.stockportfoliotracker.ui
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -21,6 +24,7 @@ fun AddToWatchlistScreen(navController: NavController, stockViewModel: StockView
     val errorMessage by stockViewModel.errorMessage.collectAsState(initial = null)
     val addSuccess = remember { mutableStateOf(false) }
     val localError = remember { mutableStateOf<String?>(null) }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(addSuccess.value) {
         if (addSuccess.value) {
@@ -34,7 +38,7 @@ fun AddToWatchlistScreen(navController: NavController, stockViewModel: StockView
                 title = { Text("Add to Watchlist") },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -44,7 +48,12 @@ fun AddToWatchlistScreen(navController: NavController, stockViewModel: StockView
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        keyboardController?.hide() // Dismiss keyboard on outside tap
+                    })
+                },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {

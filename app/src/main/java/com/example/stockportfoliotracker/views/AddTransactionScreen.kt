@@ -1,13 +1,16 @@
 package com.example.stockportfoliotracker.views
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -24,6 +27,7 @@ fun AddTransactionScreen(navController: NavController, transactionViewModel: Tra
     val localError = remember { mutableStateOf<String?>(null) }
     var isDropdownExpanded by remember { mutableStateOf(false) } // Dropdown state
     val netAvailableQuantity = remember { mutableStateOf(0) }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     // Fetch net available quantity for the ticker when it changes
     LaunchedEffect(ticker.value) {
@@ -39,7 +43,7 @@ fun AddTransactionScreen(navController: NavController, transactionViewModel: Tra
                 title = { Text("Add Transaction") },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -49,7 +53,12 @@ fun AddTransactionScreen(navController: NavController, transactionViewModel: Tra
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                    keyboardController?.hide() // Dismiss keyboard on outside tap
+                })
+            },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {

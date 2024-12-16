@@ -1,14 +1,13 @@
 package com.example.stockportfoliotracker.ui
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.stockportfoliotracker.data.DataStoreManager
@@ -25,6 +24,7 @@ fun SettingsScreen(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val savedApiKey by dataStoreManager.apiKey.collectAsState(initial = "")
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     var newApiKey by remember { mutableStateOf("") }
     var showSnackbar by remember { mutableStateOf(false) }
@@ -49,7 +49,12 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        keyboardController?.hide()
+                    })
+                },
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Dark mode toggle

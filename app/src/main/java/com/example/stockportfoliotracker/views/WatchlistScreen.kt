@@ -16,12 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import com.example.stockportfoliotracker.viewmodel.StockViewModel
-import com.example.stockportfoliotracker.views.PortfolioScreen
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.stockportfoliotracker.data.models.StockEntity
@@ -96,7 +91,8 @@ fun StockItem(
                     color = if (stock.change.startsWith("+")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 )
             }
-            IconButton(onClick = { onDeleteStock() }) {
+            IconButton(
+                onClick = { onDeleteStock() }) {
                 Icon(Icons.Default.Delete, contentDescription = "Delete Stock")
             }
         }

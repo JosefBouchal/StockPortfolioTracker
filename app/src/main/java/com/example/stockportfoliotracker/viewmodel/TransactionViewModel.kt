@@ -8,9 +8,12 @@ import com.example.stockportfoliotracker.data.models.TransactionEntity
 import com.example.stockportfoliotracker.network.RetrofitClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class TransactionViewModel(application: Application) : AndroidViewModel(application) {
@@ -24,6 +27,22 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
+    // Calculated fields
+    val totalSpent: StateFlow<Double>
+        get() = _transactions.map { calculateTotalSpent(it) }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    val totalSells: StateFlow<Double>
+        get() = _transactions.map { calculateTotalSells(it) }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    val currentValue: StateFlow<Double>
+        get() = _transactions.map { calculateCurrentValue(it) }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    val realizedProfitLoss: StateFlow<Double>
+        get() = _transactions.map { calculateRealizedProfitLoss(it) }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
+
+    val unrealizedProfitLoss: StateFlow<Double>
+        get() = _transactions.map { calculateUnrealizedProfitLoss(it) }.stateIn(viewModelScope, SharingStarted.Eagerly, 0.0)
 
     init {
         loadTransactions()
@@ -108,6 +127,75 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
             .sumOf { it.quantity }
     }
 
+    private fun calculateTotalSpent(transactions: List<TransactionEntity>): Double {
+        return transactions.filter { it.quantity > 0 }.sumOf { it.quantity * it.purchasePrice }
+    }
+
+    private fun calculateTotalSells(transactions: List<TransactionEntity>): Double {
+        return transactions.filter { it.quantity < 0 }.sumOf { -it.quantity * it.purchasePrice }
+    }
+
+    private fun calculateCurrentValue(transactions: List<TransactionEntity>): Double {
+        return transactions.groupBy { it.ticker.uppercase() }.entries.sumOf { (ticker, tickerTransactions) ->
+            val totalShares = tickerTransactions.sumOf { it.quantity }
+            val lastPrice = tickerTransactions.lastOrNull()?.lastPrice ?: 0.0
+            totalShares * lastPrice
+        }
+    }
+
+    private fun calculateRealizedProfitLoss(transactions: List<TransactionEntity>): Double {
+        var realizedProfitLoss = 0.0
+        transactions.groupBy { it.ticker.uppercase() }.forEach { (_, tickerTransactions) ->
+            var totalShares = 0
+            var totalCost = 0.0
+            tickerTransactions.forEach { transaction ->
+                if (transaction.quantity > 0) {
+                    totalShares += transaction.quantity
+                    totalCost += transaction.quantity * transaction.purchasePrice
+                } else {
+                    val soldShares = -transaction.quantity
+                    if (soldShares <= totalShares) {
+                        val averageCostPerShare = totalCost / totalShares
+                        realizedProfitLoss += soldShares * (transaction.purchasePrice - averageCostPerShare)
+                        totalShares -= soldShares
+                        totalCost -= soldShares * averageCostPerShare
+                    }
+                }
+            }
+        }
+        return realizedProfitLoss
+    }
+
+    private fun calculateUnrealizedProfitLoss(transactions: List<TransactionEntity>): Double {
+        var unrealizedProfitLoss = 0.0
+
+        transactions.groupBy { it.ticker.uppercase() }.forEach { (_, tickerTransactions) ->
+            var totalShares = 0
+            var totalCost = 0.0
+
+            tickerTransactions.forEach { transaction ->
+                if (transaction.quantity > 0) { // Buy transaction
+                    totalShares += transaction.quantity
+                    totalCost += transaction.quantity * transaction.purchasePrice
+                } else { // Sell transaction
+                    val soldShares = -transaction.quantity
+                    if (soldShares <= totalShares) {
+                        val averageCostPerShare = totalCost / totalShares
+                        totalShares -= soldShares
+                        totalCost -= soldShares * averageCostPerShare
+                    }
+                }
+            }
+
+            // Calculate unrealized P/L for remaining shares
+            if (totalShares > 0) {
+                val lastPrice = tickerTransactions.lastOrNull()?.lastPrice ?: 0.0
+                unrealizedProfitLoss += totalShares * (lastPrice - (totalCost / totalShares))
+            }
+        }
+
+        return unrealizedProfitLoss
+    }
 
 
 }

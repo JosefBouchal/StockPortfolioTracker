@@ -20,10 +20,12 @@ import com.example.stockportfoliotracker.viewmodel.TransactionViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PortfolioScreen(transactionViewModel: TransactionViewModel, navController: NavController) {
+    val totalSpent by transactionViewModel.totalSpent.collectAsState()
+    val totalSells by transactionViewModel.totalSells.collectAsState()
+    val currentValue by transactionViewModel.currentValue.collectAsState()
+    val realizedProfitLoss by transactionViewModel.realizedProfitLoss.collectAsState()
+    val unrealizedProfitLoss by transactionViewModel.unrealizedProfitLoss.collectAsState()
     val transactions by transactionViewModel.transactions.collectAsState(initial = emptyList())
-    val totalSpent = transactions.filter { it.quantity > 0 }.sumOf { it.quantity * it.purchasePrice }
-    val currentValue = transactions.sumOf { it.quantity * it.lastPrice }
-    val profitLoss = currentValue - totalSpent
     val isRefreshing by transactionViewModel.isRefreshing.collectAsState()
 
     Scaffold(
@@ -66,13 +68,11 @@ fun PortfolioScreen(transactionViewModel: TransactionViewModel, navController: N
                 Column(Modifier.padding(16.dp)) {
                     Text("Portfolio Summary", style = MaterialTheme.typography.titleMedium)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Total Spent: $%.2f".format(totalSpent))
-                    Text("Current Value: $%.2f".format(currentValue))
-                    Text(
-                        "Profit/Loss: $%.2f".format(profitLoss),
-                        color = if (profitLoss >= 0) Color.Green else Color.Red,
-                        style = MaterialTheme.typography.titleSmall
-                    )
+                    SummaryRow("Total Spent:", totalSpent)
+                    SummaryRow("Total Sells:", totalSells)
+                    SummaryRow("Current Value:", currentValue)
+                    SummaryRow("Realized P/L:", realizedProfitLoss, realizedProfitLoss >= 0)
+                    SummaryRow("Unrealized P/L:", unrealizedProfitLoss, unrealizedProfitLoss >= 0)
                 }
             }
 
@@ -91,6 +91,20 @@ fun PortfolioScreen(transactionViewModel: TransactionViewModel, navController: N
 }
 
 @Composable
+fun SummaryRow(label: String, value: Double, isPositive: Boolean? = null) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label)
+        Text(
+            "$%.2f".format(value),
+            color = isPositive?.let { if (it) Color.Green else Color.Red } ?: Color.Unspecified
+        )
+    }
+}
+
+
+
+
+@Composable
 fun TransactionCard(
     transaction: TransactionEntity,
     onEdit: () -> Unit,
@@ -100,8 +114,7 @@ fun TransactionCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
-        elevation = CardDefaults.elevatedCardElevation(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        elevation = CardDefaults.elevatedCardElevation()
     ) {
         Column(
             modifier = Modifier
@@ -111,15 +124,16 @@ fun TransactionCard(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column {
                     Text(
-                        text = transaction.ticker,
-                        style = MaterialTheme.typography.titleMedium
+                        text = "${transaction.ticker.uppercase()} (${if (transaction.quantity > 0) "Buy" else "Sell"})",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (transaction.quantity > 0) Color.Green else Color.Red
                     )
                     Text(
                         text = "Quantity: ${transaction.quantity}",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = "Bought: $%.2f".format(transaction.purchasePrice),
+                        text = "Price: $%.2f".format(transaction.purchasePrice),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
@@ -128,7 +142,7 @@ fun TransactionCard(
                     )
                     Text(
                         text = "P/L: $%.2f".format((transaction.lastPrice - transaction.purchasePrice) * transaction.quantity),
-                        color = if ((transaction.lastPrice - transaction.purchasePrice) >= 0) Color.Green else Color.Red,
+                        color = if ((transaction.lastPrice - transaction.purchasePrice) * transaction.quantity >= 0) Color.Green else Color.Red,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -152,3 +166,4 @@ fun TransactionCard(
         }
     }
 }
+
